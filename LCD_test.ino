@@ -61,9 +61,11 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 void setup() {
   Serial.begin(9600);
+
+  tft.reset();
   Serial.println("BEGIN TFT LCD TEST");
   Serial.print("TFT size is "); 
-  Serial.print(tft.width()); Serial.print("x"); Serial.println(tft.height());
+  Serial.print(tft.width()); Serial.print(" x "); Serial.println(tft.height());
 
   uint16_t identifier = tft.readID(); // read LCD driver
   tft.begin(identifier);
@@ -85,13 +87,20 @@ void setup() {
   buttons[1].initButton(&tft, 240, 250, 320, 80, RED, RED, WHITE, buttonLabel[1], 2);
   buttons[0].drawButton();
   buttons[1].drawButton();
+  
 }
-
+ 
 void loop() {
   //detect touch of finger
   digitalWrite(13, HIGH);
   TSPoint p = ts.getPoint();
   digitalWrite(13, LOW);
+
+  // if sharing pins, you'll need to fix the directions of the touchscreen pins
+  //pinMode(XP, OUTPUT);
+  pinMode(XM, OUTPUT);
+  pinMode(YP, OUTPUT);
+  //pinMode(YM, OUTPUT);
 
   /* Used for testing where user is touching the screen
   if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
@@ -120,9 +129,8 @@ void loop() {
       buttons[b].drawButton();  // draw normal
     }
     else if (buttons[b].justPressed()) {
-      buttons[b].drawButton(true);  // draw invert!
+      buttons[b].drawButton(true);  // draw invert !
     }
-
     delay(50); // Let's not kill the LCD now
   }
 }

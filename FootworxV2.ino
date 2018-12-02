@@ -23,11 +23,13 @@
 #define GREEN       0x07E0      /*   0, 255,   0 */
 
 //button array and variables used on different pages
-Adafruit_GFX_Button buttons[2];                           //for main screen
+Adafruit_GFX_Button buttons[2];                           //for MAIN screen
 char buttonLabel[2][10] = {"PRACTICE", "BLUETOOTH"};
 Adafruit_GFX_Button buttonsPractice[10];                  //for PRACTICE screen
 char buttonPracticeLabel[4][8] = {"+", "-", "BACK", "START"};
 char buttonStartLabel[2][10] = {"ROUNDS", "MOVEMENTS"};
+Adafruit_GFX_Button buttonsBluetooth[1];                  //for BLUETOOTH screen
+char buttonBluetoothLabel[1][5] = {"BACK"};
 
 //pressure min and max for touch detection
 #define MINPRESSURE 10
@@ -435,7 +437,80 @@ void start(){
  * on the board manually
  */
 
-void bluetooth(){}
+void bluetooth() {
+  // set up new tft screen
+  tft.reset();
+  uint16_t identifier = tft.readID(); // read LCD driver
+  tft.begin(identifier);
+  tft.setRotation(1); // LANDSCAPE
+  tft.fillScreen(BLACK);
+
+  //draw labels for speed, rounds, movements, and rest
+  tft.fillRect(5, 5, 470, 50, BLACK);
+  tft.setCursor(50, 25);
+  tft.setTextColor(WHITE);
+  tft.setTextSize(2);
+  tft.print("SPEED   ROUNDS  MOVEMENTS   REST");
+
+  //textboxes to display numbers
+  int x = 56;
+  int yPlus = 125;
+  for (int i = 0; i < 4; i++){
+    tft.fillRect(x, yPlus, 50, 40, BLACK);
+    tft.setCursor(x+15, yPlus+15);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.print(values[i]);
+
+    x += 106;
+  }
+
+  //draw button for "BACK"
+  buttonsBluetooth[0].initButton(&tft, 140, 273, 120, 65, DARKGREEN, DARKGREEN, WHITE, buttonBluetoothLabel[0], 2);
+  buttonsBluetooth[0].drawButton();
+
+  //will continue to stay on PRACTICE screen until "START" or "BACK" is pressed
+  while(true){
+    //detect touch of finger
+    digitalWrite(13, HIGH);
+    TSPoint p = ts.getPoint();
+    digitalWrite(13, LOW);
+    
+    // if sharing pins, you'll need to fix the directions of the touchscreen pins
+    //pinMode(XP, OUTPUT);
+    pinMode(XM, OUTPUT);
+    pinMode(YP, OUTPUT);
+    //pinMode(YM, OUTPUT);
+    
+    if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+      p.x = p.x;
+      p.y = p.y;
+      p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+      p.y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+    }
+    
+    if ((buttonsBluetooth[0].contains(p.x, p.y)) && p.x > 10) {
+      Serial.print("Pressing: "); Serial.println(0);
+      buttonsBluetooth[0].press(true);  // tell the button it is pressed
+    } else {
+      buttonsBluetooth[0].press(false);  // tell the button it is NOT pressed
+    }
+  
+    //invert button colors if pressed and transition to next screen
+    if (buttonsBluetooth[0].justReleased()) {
+      Serial.print("Released: "); Serial.println(0);
+      buttonsBluetooth[0].drawButton();  // draw normal
+    }
+
+    //if user clicks on "BACK" button
+    if (buttonsBluetooth[0].justPressed()) {
+      buttonsBluetooth[0].drawButton(true);  // draw invert !
+      break;
+    }
+  }
+  beginning: 
+  delay(1);
+}
 
 /* 
  *  MAIN METHOD

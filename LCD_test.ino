@@ -40,8 +40,11 @@
 #define PINK        0xF81F
 
 //button array and variables
-Adafruit_GFX_Button buttons[2];
+Adafruit_GFX_Button buttons[2];                           //for main screen
 char buttonLabel[2][10] = {"PRACTICE", "BLUETOOTH"};
+Adafruit_GFX_Button buttonsPractice[10];                  //for PRACTICE screen
+char buttonPracticeLabel[4][8] = {"+", "-", "BACK", "START"};
+char buttonStartLabel[2][10] = {"ROUNDS", "MOVEMENTS"};
 
 //pressure min and max
 #define MINPRESSURE 10
@@ -59,14 +62,19 @@ char buttonLabel[2][10] = {"PRACTICE", "BLUETOOTH"};
 MCUFRIEND_kbv tft;
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
+//other important variables
+boolean set = false; //for LOOP
+int speeds = 5;      //for PRACTICE
+int rounds = 3;
+int movements = 2;
+int breaks = 10;
+int values[4] = {speeds, rounds, movements, breaks};
+
 void setup() {
   Serial.begin(9600);
 
   tft.reset();
-  Serial.println("BEGIN TFT LCD TEST");
-  Serial.print("TFT size is "); 
-  Serial.print(tft.width()); Serial.print(" x "); Serial.println(tft.height());
-
+  
   uint16_t identifier = tft.readID(); // read LCD driver
   tft.begin(identifier);
   tft.setRotation(1); // LANDSCAPE
@@ -87,10 +95,35 @@ void setup() {
   buttons[1].initButton(&tft, 240, 250, 320, 80, RED, RED, WHITE, buttonLabel[1], 2);
   buttons[0].drawButton();
   buttons[1].drawButton();
-  
 }
- 
+
+/*
+ * LOOP 
+ */
+
 void loop() {
+  //need a new setup?
+  if (set == true){
+    setter:
+    Serial.print("NANI");
+    tft.reset();
+    uint16_t identifier = tft.readID(); // read LCD driver
+    tft.begin(identifier);
+    tft.setRotation(1); // LANDSCAPE
+    tft.fillScreen(BLACK);
+
+    tft.fillRect(80, 20, 320, 80, BLACK);
+    tft.setCursor(89, 50);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.print("FOOTWORX BADMINTON TRAINER");
+    
+    buttons[0].initButton(&tft, 240, 150, 320, 80, NAVY, NAVY, WHITE, buttonLabel[0], 2);
+    buttons[1].initButton(&tft, 240, 250, 320, 80, RED, RED, WHITE, buttonLabel[1], 2);
+    buttons[0].drawButton();
+    buttons[1].drawButton();
+  }
+  
   //detect touch of finger
   digitalWrite(13, HIGH);
   TSPoint p = ts.getPoint();
@@ -101,11 +134,6 @@ void loop() {
   pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
   //pinMode(YM, OUTPUT);
-
-  /* Used for testing where user is touching the screen
-  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
-    Serial.print(ts.readTouchX()); Serial.print(", "); Serial.println(ts.readTouchY());
-  } */
 
   if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
     p.x = p.x;
@@ -123,14 +151,274 @@ void loop() {
       buttons[b].press(false);  // tell the button it is NOT pressed
     }
 
-    //invert button colors if pressed
+    //invert button colors if pressed and transition to next screen
     if (buttons[b].justReleased()) {
       Serial.print("Released: "); Serial.println(b);
       buttons[b].drawButton();  // draw normal
+      if(b == 0){
+        practice();
+        goto setter;
+      } else if (b == 1) {
+        bluetooth();
+      }
     }
-    else if (buttons[b].justPressed()) {
+    if (buttons[b].justPressed()) {
       buttons[b].drawButton(true);  // draw invert !
     }
-    delay(50); // Let's not kill the LCD now
+    delay(5); // Let's not kill the LCD now
   }
 }
+
+/*
+ * PRACTICE function -> transitions to practice page 
+ */
+ 
+void practice() {
+  // set up new tft screen
+  setterPractice:
+  tft.reset();
+  uint16_t identifier = tft.readID(); // read LCD driver
+  tft.begin(identifier);
+  tft.setRotation(1); // LANDSCAPE
+  tft.fillScreen(BLACK);
+
+  //draw labels for speed, rounds, movements, and rest
+  tft.fillRect(5, 5, 470, 50, BLACK);
+  tft.setCursor(50, 25);
+  tft.setTextColor(WHITE);
+  tft.setTextSize(2);
+  tft.print("SPEED   ROUNDS  MOVEMENTS  REST");
+  
+  //draw buttons
+  int x = 81;
+  int yPlus = 90;
+  int yMinus = 200;
+  for(int i = 0; i < 4; i++) {
+      buttonsPractice[i*2].initButton(&tft, x, yPlus, 50, 50, RED, RED, WHITE, buttonPracticeLabel[0], 2);
+      buttonsPractice[(i*2) + 1].initButton(&tft, x, yMinus, 50, 50, NAVY, NAVY, WHITE, buttonPracticeLabel[1], 2);
+      buttonsPractice[i*2].drawButton();
+      buttonsPractice[(i*2)+1].drawButton();
+
+      x += 106;
+  }
+
+  //textboxes to display numbers
+  x = 56;
+  yPlus = 125;
+  for (int i = 0; i < 4; i++){
+    tft.fillRect(x, yPlus, 50, 40, BLACK);
+    tft.setCursor(x+15, yPlus+15);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.print(values[i]);
+
+    x += 106;
+  }
+
+  //draw buttons for "BACK" and "START"
+  buttonsPractice[8].initButton(&tft, 140, 273, 120, 65, DARKGREEN, DARKGREEN, WHITE, buttonPracticeLabel[2], 2);
+  buttonsPractice[9].initButton(&tft, 340, 273, 120, 65, DARKGREEN, DARKGREEN, WHITE, buttonPracticeLabel[3], 2);
+  buttonsPractice[8].drawButton();
+  buttonsPractice[9].drawButton();
+
+  //will continue to stay on PRACTICE screen until "START" or "BACK" is pressed
+  while(true){
+    //detect touch of finger
+    digitalWrite(13, HIGH);
+    TSPoint p = ts.getPoint();
+    digitalWrite(13, LOW);
+    
+    // if sharing pins, you'll need to fix the directions of the touchscreen pins
+    //pinMode(XP, OUTPUT);
+    pinMode(XM, OUTPUT);
+    pinMode(YP, OUTPUT);
+    //pinMode(YM, OUTPUT);
+    
+    if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+      p.x = p.x;
+      p.y = p.y;
+      p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+      p.y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
+    }
+    
+    for (int b = 0; b <= 10; b++) {
+      //check if buttons were pressed
+      if ((buttonsPractice[b].contains(p.x, p.y)) && p.x > 10) {
+        Serial.print("Pressing: "); Serial.println(b);
+        buttonsPractice[b].press(true);  // tell the button it is pressed
+      } else {
+        buttonsPractice[b].press(false);  // tell the button it is NOT pressed
+      }
+    
+      //invert button colors if pressed and transition to next screen
+      if (buttonsPractice[b].justReleased()) {
+        Serial.print("Released: "); Serial.println(b);
+        buttonsPractice[b].drawButton();  // draw normal
+      }
+      if (buttonsPractice[b].justPressed()) {
+        buttonsPractice[b].drawButton(true);  // draw invert !
+
+        //switch case used for incrementing and decrementing variables
+        switch (b){
+          case 0:
+            speeds++;
+            if(speeds >= 0 && speeds <= 10){
+              tft.fillRect(56, 126, 50, 40, BLACK);
+              tft.setCursor(71, 140);
+              tft.setTextColor(WHITE);
+              tft.setTextSize(2);
+              tft.print(speeds);
+            } else {
+              speeds--;
+            }
+            break;
+          case 1:
+            speeds--;
+            if(speeds >= 0 && speeds <= 10){
+              tft.fillRect(56, 126, 50, 40, BLACK);
+              tft.setCursor(71, 140);
+              tft.setTextColor(WHITE);
+              tft.setTextSize(2);
+              tft.print(speeds);
+            } else {
+              speeds++;
+            }
+            break;
+          case 2:
+            rounds++;
+            tft.fillRect(162, 126, 50, 40, BLACK);
+            tft.setCursor(177, 140);
+            tft.setTextColor(WHITE);
+            tft.setTextSize(2);
+            tft.print(rounds);
+            break;
+          case 3:
+            rounds--;
+            if(rounds >= 0){
+              tft.fillRect(162, 126, 50, 40, BLACK);
+              tft.setCursor(177, 140);
+              tft.setTextColor(WHITE);
+              tft.setTextSize(2);
+              tft.print(rounds);
+            } else {
+              rounds++;
+            }
+            break;
+          case 4:
+            movements++;
+            tft.fillRect(268, 126, 50, 40, BLACK);
+            tft.setCursor(283, 140);
+            tft.setTextColor(WHITE);
+            tft.setTextSize(2);
+            tft.print(movements);
+            break;
+          case 5:
+            movements--;
+            if(movements >= 0){
+              tft.fillRect(268, 126, 50, 40, BLACK);
+              tft.setCursor(283, 140);
+              tft.setTextColor(WHITE);
+              tft.setTextSize(2);
+              tft.print(movements);
+            } else {
+              movements++;
+            }
+            break;
+          case 6:
+            breaks++;
+            tft.fillRect(374, 126, 50, 40, BLACK);
+            tft.setCursor(389, 140);
+            tft.setTextColor(WHITE);
+            tft.setTextSize(2);
+            tft.print(breaks);
+            break;
+          case 7:
+            breaks--;
+            if(breaks >= 0){
+              tft.fillRect(374, 126, 50, 40, BLACK);
+              tft.setCursor(389, 140);
+              tft.setTextColor(WHITE);
+              tft.setTextSize(2);
+              tft.print(breaks);
+            } else {
+              breaks++;
+            }  
+            break;
+          case 8:
+            goto beginning;
+          case 9: 
+            start();
+            goto setterPractice;
+        }
+      }
+      delay(5); // Let's not kill the LCD now
+    }
+  }
+  beginning: 
+  delay(1);
+}
+
+
+/*
+ * START function -> used to transition to keep track of current movement and round
+ */
+
+void start(){
+  // new variables
+  int counterRounds;
+  int counterMovements;
+  double codedSpeed = (-(5/3) * speeds + 20) * 150; //speed used in code
+  
+  // set up new tft screen
+  tft.reset();
+  uint16_t identifier = tft.readID(); // read LCD driver
+  tft.begin(identifier);
+  tft.setRotation(1); // LANDSCAPE
+  tft.fillScreen(BLACK);
+
+  //create textboxes for labels
+  tft.fillRect(5, 30, 460, 50, BLACK);
+  tft.setTextColor(WHITE);
+  tft.setTextSize(3);
+  tft.setCursor(10, 40);
+  tft.print("    ROUNDS    MOVEMENTS");
+
+  // create textboxes for current round and current movement
+  tft.fillRect(60, 100, 150, 120, LIGHTGREY);
+  tft.fillRect(270, 100, 150, 120, LIGHTGREY);
+  tft.setCursor(130, 150);
+  tft.print(0);
+  tft.setCursor(340, 150); 
+  tft.print(0);
+
+  //ACTUAL EXECUTION OF CODE
+  for(counterRounds = 0; counterRounds < rounds; counterRounds++){
+    for(counterMovements = 0; counterMovements <= movements; counterMovements++){
+      tft.fillRect(270, 100, 150, 120, LIGHTGREY);
+      tft.setCursor(340, 150); 
+      tft.print(counterMovements);
+      delay(codedSpeed);
+    }
+
+    tft.fillRect(60, 100, 150, 120, LIGHTGREY);
+    tft.setCursor(130, 150); 
+    tft.print(counterRounds + 1);
+
+    tft.fillRect(270, 100, 150, 120, LIGHTGREY);
+    tft.setCursor(340, 150); 
+    tft.print(0);
+    
+    if(counterRounds == rounds - 1){
+      delay(1000);
+    } else {
+      delay(breaks * 1000);
+    }
+  }
+}
+
+/*
+ * BLUETOOTH function -> connectivity to phone 
+ */
+
+void bluetooth(){}
+

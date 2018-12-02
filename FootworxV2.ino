@@ -251,7 +251,7 @@ void practice() {
       p.y = map(p.y, TS_MINY, TS_MAXY, 0, tft.height());
     }
     
-    for (int b = 0; b <= 10; b++) {
+    for (int b = 0; b < 10; b++) {
       //check if buttons were pressed
       if ((buttonsPractice[b].contains(p.x, p.y)) && p.x > 10) {
         Serial.print("Pressing: "); Serial.println(b);

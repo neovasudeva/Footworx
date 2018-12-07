@@ -58,9 +58,9 @@ int rounds = 2; //rounds customized by and displayed to user; limited from 0 to 
 int movements = 5; //movements custmomized by and displayed to user; imited from 0 to 100
 int breaks = 10; //breaks customized by user; limited from 0 to 30 seconds
 
-double codedSpeed = (-(5/3) * speeds + 20) * 150; //speed used in code
+double codedSpeed; //speed used in code
   //NOTE: lights turn on for (codedSpeed - 250)ms and turn off for (250)ms
-double codedBreak = breaks * 1000; //calculated break
+double codedBreak; //calculated break
 
 int values[4] = {speeds, rounds, movements, breaks};  //for PRACTICE
 boolean set = false; //for LOOP
@@ -144,6 +144,7 @@ void flash(int number){
  * When randomRegister == 2, it displays light on bottom register
  * It will do a full turn-on-turn-off cycle for a light
  */
+ 
 void movement(){
   //random numbers to choose register and a single light
   int randomRegister = (int) random(1, 3);
@@ -381,7 +382,8 @@ void start(){
   // new variables
   int counterRounds;
   int counterMovements;
-  double codedSpeed = (-(5/3) * speeds + 20) * 150; //speed used in code
+  codedSpeed = (-(5/3) * speeds + 20) * 150; //speed used in code
+  codedBreak = breaks * 1000; //Break time used in code
   
   // set up new tft screen
   tft.reset();
@@ -576,6 +578,7 @@ void loop() {
         goto setter;
       } else if (b == 1) {
         bluetooth();
+        goto setter;
       }
     }
     if (buttons[b].justPressed()) {

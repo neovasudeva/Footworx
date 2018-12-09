@@ -66,7 +66,7 @@ int values[4] = {speeds, rounds, movements, breaks};  //for PRACTICE
 boolean set = false; //for LOOP
 
 //array to for MOVEMENT METHOD to turn on a single random light
-byte lights[] = {0b10000000, 0b010000000, 0b00100000, 0b00010000, 0b00001000, 0b00000100, 0b00000010, 0b00000001};
+byte lights[] = {0b10000000, 0b01000000, 0b00100000, 0b00010000, 0b00001000, 0b00000100, 0b00000010, 0b00000001};
 
 /*
  * SETUP METHOD
